@@ -1,118 +1,122 @@
 
 import { GameState } from "../main.js"
 
-export function volumeManager() {
-	let barXPosition = -110
-	let seconds = 0
-	let tune = 0
+let bg;
+let volumeText;
+let soundElements;
+let volumeBars;
 
-	volume(GameState.volumeIndex / 10)
-
-	for (let i = 0; i < get("volElement").length; i++) {
-		destroy(get("volElement")[i])
-	}
-
-	let bg = add([
-		rect(width() / 6, 80),
+export function addSoundElements() {
+	bg = add([
+		rect(width() / 6, 80, { radius: 2.5 }),
 		pos(width() / 2, 0),
 		anchor("top"),
 		color(BLACK),
-		opacity(0),
 		stay(),
+		opacity(0.75),
 		z(999999999),
 		"volElement",
 	])
 	
-	let volumeText = bg.add([
+	volumeText = bg.add([
 		text("VOLUME"),
 		pos(0, bg.height - 12),
 		anchor("center"),
 		scale(0.6),
-		opacity(0),
-		// stay(),
 		z(9999999999),
 		"volElement",
+		{
+			update() {
+				if (GameState.sound.volume > 0) this.text = `VOLUME ${GameState.sound.volume.toFixed(1) * 100}%`
+				else this.text = "MUTED"
+			}
+		}
 	])
-	
-	let bars;
-	
+
+	// bars
 	for (let i = 0; i < 10; i++) {
-		barXPosition += 20
-		
-		volumeText.add([
-			pos(barXPosition, -65),
-			rect(10, bg.height - 10),
+		bg.add([
+			pos(-67 + i * 15, 30),
+			rect(10, bg.height - 40, { radius: 1 }),
 			opacity(0),
 			anchor("center"),
-			// stay(),
 			z(99999999999),
 			"volElement",
+			"bar",
+			{
+				volume: 0.1 * (i + 1),
+				update() {
+					if (GameState.sound.volume.toFixed(1) < this.volume.toFixed(1)) this.opacity = 0.1
+					else this.opacity = 1
+				}
+			}
 		])
 	}
 
-	bars = volumeText.get("*", { recursive: true })
-	
+	soundElements = get("volElement", { recursive: true })
+	volumeBars = get("bar", { recursive: true })
+}
 
-	let gameManager = add([
+export function volumeManager() {
+	volume(GameState.sound.volume)
+	
+	let changeVolTune = 0
+	let waitingTimer = wait()
+
+	let soundManager = add([
 		stay(),
 		{
 			update() {
+				GameState.sound.volume = GameState.sound.volume.toFixed(1)
+				GameState.sound.volume = parseFloat(GameState.sound.volume)
+				changeVolTune = map(GameState.sound.volume, 0, 1, -250, 0)
+
 				if (isKeyPressed("-")) {
-					if (GameState.volumeIndex > 0) {
-						bars[GameState.volumeIndex - 1].opacity = 0.1
-						GameState.volumeIndex--
-						volume(GameState.volumeIndex / 10)
-						tune -= 25
+					if (GameState.sound.volume > 0) {
+						GameState.sound.volume -= 0.1
+						volume(GameState.sound.volume)
 					}
-					
-					play("volumeChange", { detune: tune })
-					seconds = 0
-					bg.opacity = 0.5
-					volumeText.opacity = 1
-					for(let i = 0; i < 10; i++) {
-						bars[i].opacity = 0.1
-					}
-			
-					for(let i = 0; i < GameState.volumeIndex; i++) {
-						bars[i].opacity = 1
-					}
+					this.trigger("show")
 				}
 
 				else if (isKeyPressed("+")) {
-					if (GameState.volumeIndex <= 9) {
-						bars[GameState.volumeIndex].opacity = 1
-						GameState.volumeIndex++
-						volume(GameState.volumeIndex / 10)
-						tune += 25
+					if (GameState.sound.volume <= 0.9) {
+						GameState.sound.volume += 0.1
+						volume(GameState.sound.volume)
 					}
-					
-					play("volumeChange", { detune: tune })
-					
-					seconds = 0
-					bg.opacity = 0.5
-					volumeText.opacity = 1
-					for(let i = 0; i < 10; i++) {
-						bars[i].opacity = 0.1
-					}
-			
-					for(let i = 0; i < GameState.volumeIndex; i++) {
-						bars[i].opacity = 1
-					}
-				}
-			
-				seconds += dt()
-
-				// makes it so everything dissapears
-				if (seconds > 0.8) {
-					bg.opacity = 0
-					volumeText.opacity = 0
-					bars.forEach(element => {
-						element.opacity = 0
-					});
+					this.trigger("show")
 				}
 			}
 		}
 	])
 
-	return gameManager;
+	soundManager.on("hide", () => {
+		if (get("volElement").length === 0) return
+		
+		soundElements.forEach(soundElement => {
+			destroy(soundElement)
+		});
+	})
+
+	soundManager.on("show", () => {
+		if (get("volElement").length === 0) addSoundElements()
+
+		waitingTimer.cancel()
+		waitingTimer = wait(1, () => {
+			soundManager.trigger("hide")
+		})
+		play("volumeChange", { detune: changeVolTune })
+	})
+
+	onCharInput((ch) => {
+		let n = parseInt(ch)
+		// is a number
+		if (!isNaN(n)) {
+			GameState.sound.volume = n / 10
+			volume(GameState.sound.volume)
+			soundManager.trigger("show")
+		}			
+	})
+
+	return soundManager;
 }

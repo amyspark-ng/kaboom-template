@@ -8,11 +8,16 @@ export function gamescene() {
 		
 		addConfetti({ pos: center() })
 
-		add([
+		let osaka = add([
 			sprite("osaka"),
 			pos(center()),
-			anchor("center")
+			anchor("center"),
+			area(),
 		])
+
+		osaka.onClick(() => {
+			play("saataandagi")
+		})
 
 		debug.log("it runs!!!! kewl")
 	})	

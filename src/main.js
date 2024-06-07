@@ -1,18 +1,19 @@
 import kaboom from "kaboom";
 import "kaboom/global";
-
 import { loadAssets } from "./loader.js"
 
 export const k = kaboom({
 	width: 1024,
 	height: 576,
-	font: 'apl386',
+	font: 'lambda',
 });
 
 export let GameState = {
-	volumeIndex: 9
+	sound: {
+		volume: 1,
+		muted: false, 
+	}
 }
 
 loadAssets()
-
 go("gamescene")
