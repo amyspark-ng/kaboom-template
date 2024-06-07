@@ -1,4 +1,5 @@
 import { addConfetti } from "../plugins/confetti.js";
+import { positionSetter } from "../plugins/positionSetter.js";
 import { volumeManager } from "../plugins/volumebar.js";
 
 export function gamescene() {
@@ -13,10 +14,11 @@ export function gamescene() {
 			pos(center()),
 			anchor("center"),
 			area(),
+			positionSetter(),
 		])
 
 		osaka.onClick(() => {
-			play("saataandagi")
+			// play("saataandagi")
 		})
 
 		debug.log("it runs!!!! kewl")
